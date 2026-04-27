@@ -22,6 +22,8 @@ El proyecto esta pensado para que los alumnos puedan:
 
 ```text
 .
+├── dataset
+│   └── .gitkeep
 ├── main.py
 ├── main_visual.py
 ├── requirements.txt
@@ -85,9 +87,19 @@ Instalar dependencias:
 pip install -r requirements.txt
 ```
 
+Copiar las imagenes de UTKFace dentro de `dataset/`. El codigo recorre esa carpeta de forma recursiva, por lo que tambien funciona si el dataset viene organizado en subcarpetas.
+
 ## Ejecucion del laboratorio
 
 Ejemplo general:
+
+```bash
+python main.py
+```
+
+El comando anterior usa por defecto la carpeta local `dataset/`.
+
+Ejemplo indicando otra ruta:
 
 ```bash
 python main.py --dataset-dir "/ruta/a/UTKFace"
@@ -96,7 +108,7 @@ python main.py --dataset-dir "/ruta/a/UTKFace"
 Ejemplo rapido con menos imagenes:
 
 ```bash
-python main.py --dataset-dir "/ruta/a/UTKFace" --max-images 200
+python main.py --max-images 200
 ```
 
 Opciones utiles:

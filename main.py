@@ -19,8 +19,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dataset-dir",
         type=Path,
-        required=True,
-        help="Ruta a la carpeta que contiene las imagenes de UTKFace.",
+        default=Path("dataset"),
+        help=(
+            "Ruta a la carpeta que contiene las imagenes de UTKFace. "
+            "Por defecto se usa ./dataset"
+        ),
     )
     parser.add_argument(
         "--output-dir",

@@ -8,7 +8,7 @@ from pathlib import Path
 class LabConfig:
     """Configura los parametros generales del laboratorio."""
 
-    dataset_dir: Path
+    dataset_dir: Path = Path("dataset")
     output_dir: Path = Path("artifacts")
     image_size: tuple[int, int] = (25, 25)
     test_size: float = 0.20
