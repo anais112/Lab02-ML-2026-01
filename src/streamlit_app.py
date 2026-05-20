@@ -2,78 +2,110 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import cv2
+import joblib
+import numpy as np
 import streamlit as st
+
+from src.preprocessing import preprocess_face_array
 
 
 def run_app() -> None:
-    """Ejecuta una app visual minima para la fase de deployment."""
+    """Ejecuta la app visual completa para la fase de deployment."""
 
     st.set_page_config(page_title="Lab02 ML - Demo visual", layout="centered")
-    st.title("Laboratorio 02: demo visual minima")
-    st.write(
-        "Esta version solo carga una imagen y deja indicado donde deben integrarse "
-        "el detector de caras y los modelos del laboratorio."
-    )
-    st.info(
-        "Pendiente para estudiantes: agregar un detector de caras, recortar cada rostro "
-        "y reutilizar el mismo preprocesamiento antes de inferir."
-    )
+    st.title("Laboratorio 02: Clasificación de género y edad")
 
+    # Cargar ambos modelos
+    gender_model_path = Path("artifacts/models/pipeline_genero.pkl")
+    age_model_path    = Path("artifacts/models/pipeline_edad.pkl")
+
+    if not gender_model_path.exists() or not age_model_path.exists():
+        st.error(
+            "No se encontraron los modelos entrenados. "
+            "Ejecuta primero main.py para generar los modelos."
+        )
+        st.stop()
+
+    gender_model = joblib.load(gender_model_path)
+    age_model    = joblib.load(age_model_path)
+
+    st.success("Modelos cargados correctamente.")
+
+    # Subir imagen
     uploaded_file = st.file_uploader(
-        "Sube una fotografia",
+        "Sube una fotografía",
         type=["jpg", "jpeg", "png"],
     )
 
     if uploaded_file is None:
         st.stop()
 
-    st.image(uploaded_file, caption="Imagen cargada", use_container_width=True)
-    st.success("La imagen se cargo correctamente.")
+    # Leer imagen con OpenCV
+    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+    image      = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
-    st.subheader("Siguiente trabajo para el laboratorio")
-    st.markdown(
-        "- Agregar un detector de caras.\n"
-        "- Recortar cada rostro detectado.\n"
-        "- Cargar el modelo de genero entrenado.\n"
-        "- Implementar y cargar el modelo de edad.\n"
-        "- Mostrar una prediccion por cada rostro."
+    # Detector de caras
+    detector = cv2.CascadeClassifier(
+        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+    )
+    faces = detector.detectMultiScale(
+        image,
+        scaleFactor=1.1,
+        minNeighbors=5
     )
 
-    suggested_gender_model = Path("artifacts/models/pipeline_genero.pkl")
-    suggested_age_model = Path("artifacts/models/pipeline_edad.pkl")
+    if len(faces) == 0:
+        st.warning("No se detectaron caras en la imagen.")
+        st.image(
+            cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+            caption="Imagen cargada sin detecciones",
+            use_container_width=True
+        )
+        st.stop()
 
-    # TODO(estudiantes): aqui deben cargarse los modelos cuando la parte visual
-    # del laboratorio incorpore detector de caras e inferencia real.
-    # gender_model = joblib.load(suggested_gender_model)
-    # age_model = joblib.load(suggested_age_model)
-    #
-    # TODO(estudiantes): tambien debe agregarse un detector de caras para obtener
-    # cada rostro antes de llamar a preprocess_face_array(...).
+    # Procesar cada rostro detectado
+    for (x, y, w, h) in faces:
+        face = image[y:y+h, x:x+w]
 
-    with st.expander("Guia de integracion para estudiantes"):
-        st.code(
-            f"""# TODO(estudiantes): agregar detector de caras.
-# Ejemplo posible con OpenCV:
-# detector = cv2.CascadeClassifier(
-#     cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-# )
-#
-# TODO(estudiantes): cargar aqui los modelos del laboratorio.
-# gender_model = joblib.load("{suggested_gender_model}")
-# age_model = joblib.load("{suggested_age_model}")
-#
-# TODO(estudiantes):
-# 1. detectar rostros,
-# 2. recortar cada rostro,
-# 3. aplicar preprocess_face_array(...),
-# 4. usar gender_model.predict(...),
-# 5. usar age_model.predict(...),
-# 6. mostrar la prediccion final en pantalla.
-""",
-            language="python",
+        # Mismo preprocesamiento que en entrenamiento
+        x_vec, _ = preprocess_face_array(face)
+
+        # Predicciones
+        pred_gender = gender_model.predict([x_vec])[0]
+        pred_age    = age_model.predict([x_vec])[0]
+
+        genero = "Hombre" if pred_gender == 1 else "Mujer"
+        label  = f"{genero} | {int(pred_age)} anios"
+
+        # Dibujar rectangulo y etiqueta sobre la imagen
+        cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(
+            image,
+            label,
+            (x, y - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (0, 255, 0),
+            1
         )
 
-    st.warning(
-        "La prediccion no se ejecuta todavia por diseno. "
-        "Primero hay que incorporar el detector de caras y completar la regresion."
+    # Mostrar imagen con predicciones
+    st.image(
+        cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+        caption="Resultado con predicciones",
+        use_container_width=True
     )
+
+    # Mostrar tabla de resultados
+    st.subheader("Resultados por rostro detectado")
+    for i, (x, y, w, h) in enumerate(faces):
+        face  = image[y:y+h, x:x+w]
+        x_vec, _ = preprocess_face_array(face)
+
+        pred_gender = gender_model.predict([x_vec])[0]
+        pred_age    = age_model.predict([x_vec])[0]
+
+        genero = "Hombre" if pred_gender == 1 else "Mujer"
+
+        st.write(f"**Rostro {i+1}:** {genero} | {int(pred_age)} años")
