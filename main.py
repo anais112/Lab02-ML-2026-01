@@ -101,7 +101,7 @@ def main() -> None:
         train_gender_classifier,
     )
     from src.data import build_dataset, dataset_to_dataframe
-    from src.regression import AgeRegressionGuide
+    from src.regression import AgeRegressionGuide, train_age_regressor, evaluate_age_regressor, save_age_regressor
     from src.visualization import (
         save_confusion_matrix_figure,
         save_dataset_distribution_figure,
@@ -198,6 +198,27 @@ def main() -> None:
         output_path=config.figures_dir / "proyeccion_pca_genero.png",
     )
 
+    print("[5.5/6] Entrenando regresion de edad...")
+    best_age_model = train_age_regressor(
+        X_train=split.X_train,
+        y_age_train=split.y_age_train,
+        pca_components=tuple(config.pca_components),
+        random_state=config.random_state,
+    )
+    age_metrics = evaluate_age_regressor(
+        model=best_age_model,
+        X_test=split.X_test,
+        y_age_test=split.y_age_test,
+    )
+    print(f"    Metricas de edad: {age_metrics}")
+    save_age_regressor(
+        model=best_age_model,
+        output_path=str(config.models_dir / "pipeline_edad.pkl"),
+    )
+    save_metrics(
+        metrics=age_metrics,
+        output_path=config.reports_dir / "metricas_edad.json",
+    )
     print("[6/6] Dejando la guia para regresion y despliegue...")
     guide = AgeRegressionGuide()
     guide_path = config.reports_dir / "guia_regresion.txt"
