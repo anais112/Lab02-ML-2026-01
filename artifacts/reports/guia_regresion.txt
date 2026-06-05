@@ -1,0 +1,11 @@
+Guia de regresion de edad
+========================
+
+La parte de regresion no se implementa en esta version.
+Los estudiantes deben completar src/regression.py siguiendo estos pasos:
+
+1. Reutilizar la misma matriz X preprocesada.
+2. Construir un Pipeline con PCA + LinearRegression.
+3. Ajustar pca__n_components con GridSearchCV.
+4. Evaluar con MAE, RMSE y R2.
+5. Guardar el modelo cuando este listo.
